@@ -189,6 +189,7 @@ class ElasticsearchService
                                     'fields' => $fields,
                                     'type' => 'best_fields',
                                     'fuzziness' => 'AUTO',
+                                    'operator' => 'and',
                                 ],
                             ],
                             [

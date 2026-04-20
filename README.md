@@ -1,66 +1,104 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# Test Case — eCommerce Data Sync
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+Laravel 11 · PostgreSQL · Redis · RabbitMQ · Elasticsearch 8
 
-## About Laravel
+---
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+## Stack
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+| | |
+|---|---|
+| PHP | 8.2 |
+| Framework | Laravel 11 |
+| Database | PostgreSQL 16 |
+| Cache | Redis |
+| Queue | RabbitMQ 3 |
+| Search | Elasticsearch 8.13 |
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+---
 
-## Learning Laravel
+## Запуск
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+```bash
+docker compose up -d --build
 
-You may also try the [Laravel Bootcamp](https://bootcamp.laravel.com), where you will be guided through building a modern Laravel application from scratch.
+docker compose exec test.laravel php artisan migrate
+docker compose exec test.laravel php artisan db:seed
+```
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+Локальна розробка:
 
-## Laravel Sponsors
+```bash
+composer run dev
+# запускає: serve + queue worker + pail
+```
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+---
 
-### Premium Partners
+## Змінні оточення
 
-- **[Vehikl](https://vehikl.com/)**
-- **[Tighten Co.](https://tighten.co)**
-- **[WebReinvent](https://webreinvent.com/)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel/)**
-- **[Cyber-Duck](https://cyber-duck.co.uk)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Jump24](https://jump24.co.uk)**
-- **[Redberry](https://redberry.international/laravel/)**
-- **[Active Logic](https://activelogic.com)**
-- **[byte5](https://byte5.de)**
-- **[OP.GG](https://op.gg)**
+```dotenv
+QUEUE_CONNECTION=rabbitmq
+RABBITMQ_HOST=rabbitmq
+RABBITMQ_PORT=5672
+RABBITMQ_USER=guest
+RABBITMQ_PASSWORD=guest
 
-## Contributing
+ELASTICSEARCH_ENABLED=true
+ELASTICSEARCH_HOST=http://elasticsearch:9200
+ELASTICSEARCH_TIMEOUT=2
+ELASTICSEARCH_INDEX_PRODUCTS=products_v1
+ELASTICSEARCH_INDEX_ORDERS=orders_v1
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+CACHE_STORE=redis
+REDIS_HOST=test-redis
 
-## Code of Conduct
+QUEUE_WORKER_SLEEP=3
+QUEUE_WORKER_PRODUCTS_TIMEOUT=60
+QUEUE_WORKER_ORDERS_TIMEOUT=60
+QUEUE_WORKER_REINDEX_TIMEOUT=120
+QUEUE_WORKER_MAX_TIME=3600
+```
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+---
 
-## Security Vulnerabilities
+## API
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+```
+GET    /api/products
+POST   /api/products
+GET    /api/products/{id}
+PUT    /api/products/{id}
+DELETE /api/products/{id}
 
-## License
+GET    /api/orders
+POST   /api/orders
+GET    /api/orders/{id}
+PUT    /api/orders/{id}
+DELETE /api/orders/{id}
+```
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+Параметри для списків: `?limit=20&page=1&q=пошуковий запит`
+
+---
+
+## Черги
+
+Три domain-черги, кожна зі своїм воркером:
+
+| Черга | Призначення |
+|---|---|
+| `products` | IndexProductJob, DeleteProductJob |
+| `orders` | IndexOrderJob, DeleteOrderJob |
+| `reindex` | ReindexJob + bulk-джоби переіндексації |
+
+---
+
+## Команди
+
+```bash
+# Повна переіндексація в Elasticsearch
+php artisan es:reindex --model=all
+php artisan es:reindex --model=products
+php artisan es:reindex --model=orders
+```

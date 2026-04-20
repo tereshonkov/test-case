@@ -80,7 +80,6 @@ class ProductService
     {
         $product = Product::create($dto->toArray());
 
-        $this->elasticsearchService->indexProduct($product);
         Cache::tags(['products'])->flush();
 
         return $product;
@@ -91,7 +90,6 @@ class ProductService
         $product->update($dto->toArray());
         $fresh = $product->fresh();
 
-        $this->elasticsearchService->indexProduct($fresh);
         Cache::tags(['products'])->flush();
 
         return $fresh;
@@ -101,7 +99,6 @@ class ProductService
     {
         $deleted = (bool) Product::findOrFail($id)->delete();
 
-        $this->elasticsearchService->deleteProduct($id);
         Cache::tags(['products'])->flush();
 
         return $deleted;

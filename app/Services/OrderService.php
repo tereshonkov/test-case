@@ -90,7 +90,6 @@ class OrderService
             return $order->fresh(['items']);
         });
 
-        $this->elasticsearchService->indexOrder($order);
         Cache::tags(['orders'])->flush();
 
         return $order;
@@ -118,7 +117,6 @@ class OrderService
             return $order->fresh(['items']);
         });
 
-        $this->elasticsearchService->indexOrder($updatedOrder);
         Cache::tags(['orders'])->flush();
 
         return $updatedOrder;
@@ -128,7 +126,6 @@ class OrderService
     {
         $deleted = (bool) Order::findOrFail($id)->delete();
 
-        $this->elasticsearchService->deleteOrder($id);
         Cache::tags(['orders'])->flush();
 
         return $deleted;

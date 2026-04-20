@@ -7,6 +7,10 @@ use Elastic\Elasticsearch\ClientBuilder;
 use Elastic\Elasticsearch\Client;
 use App\Services\ElasticsearchService;
 use Illuminate\Support\Facades\Log;
+use App\Observers\ProductObserver;
+use App\Observers\OrderObserver;
+use App\Models\Product;
+use App\Models\Order;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -15,7 +19,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        $this->app->singleton(Client::class, function ($app) {
+        $this->app->singleton(Client::class, function () {
             return ClientBuilder::create()
                 ->setHosts([config('elasticsearch.host')])
                 ->setRetries(2)
@@ -35,6 +39,9 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(ElasticsearchService $elasticsearchService): void
     {
+        Product::observe(ProductObserver::class);
+        Order::observe(OrderObserver::class);
+        
         if (!config('elasticsearch.enabled')) {
             return;
         }
